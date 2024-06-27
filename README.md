@@ -1,1 +1,1 @@
-##Task for IST course (Erlang)
+# Task for IST course (Erlang)
