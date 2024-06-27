@@ -7,16 +7,26 @@ connect() -> spawn(fun() -> loop() end).
 loop() -> 
     receive
         {From, Request} when is_pid(From) ->
-            Result = calculate(Request),
-            From ! Result
-        end,
-    loop().
+            try
+                Result = calculate(Request),
+                From ! Result
+            catch
+                _:Reason ->
+                    From ! {error, Reason}
+            end,
+        loop() 
+    end.
 
 calculate(Pid, Oper) -> 
     From = self(),
-    Pid ! {From, Oper},
-    receive
-        Reply -> Reply
+    try
+        Pid ! {From, Oper},
+        receive
+            Reply -> Reply
+        end
+    catch
+        _:Reason ->
+            {error, Reason}
     end.
 
 calculate(Oper) ->
@@ -38,5 +48,7 @@ calculate_sub(Args) ->
     lists:foldl(fun(Arg, Acc) -> Acc - calculate(Arg) end, hd(Args), tl(Args)).
 
 calculate_div(Args) ->
-    lists:foldl(fun(Arg, Acc) -> Acc / calculate(Arg) end, hd(Args), tl(Args)).
+    try lists:foldl(fun(Arg, Acc) -> Acc / calculate(Arg) end, hd(Args), tl(Args))
+    catch _:_ -> {error, divide_by_zero}
+end.
 
