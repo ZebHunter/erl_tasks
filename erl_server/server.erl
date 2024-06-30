@@ -1,33 +1,46 @@
 -module(server).
--export([connect/0, 
-    calculate/2]).
+-behaviour(gen_server).
 
-connect() -> spawn(fun() -> loop() end).
+-export([start_link/0, connect/0, calculate/2]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
-loop() -> 
-    receive
-        {From, Request} when is_pid(From) ->
-            try
-                Result = calculate(Request),
-                From ! Result
-            catch
-                _:Reason ->
-                    From ! {error, Reason}
-            end,
-        loop() 
-    end.
+-record(state, {}).
 
-calculate(Pid, Oper) -> 
-    From = self(),
+start_link() ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+connect() ->
+    gen_server:call(?MODULE, connect).
+
+calculate(Pid, Oper) ->
+    gen_server:call(Pid, {calculate, Oper}).
+
+init([]) ->
+    {ok, #state{}}.
+
+handle_call(connect, _From, State) ->
+    {reply, self(), State};
+
+handle_call({calculate, Oper}, _From, State) ->
     try
-        Pid ! {From, Oper},
-        receive
-            Reply -> Reply
-        end
+        Result = calculate(Oper),
+        {reply, Result, State}
     catch
         _:Reason ->
-            {error, Reason}
+            {reply, {error, Reason}, State}
     end.
+
+handle_cast(_Request, State) ->
+    {noreply, State}.
+
+handle_info(_Info, State) ->
+    {noreply, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
 
 calculate(Oper) ->
     case Oper of
@@ -49,6 +62,5 @@ calculate_sub(Args) ->
 
 calculate_div(Args) ->
     try lists:foldl(fun(Arg, Acc) -> Acc / calculate(Arg) end, hd(Args), tl(Args))
-    catch _:_ -> {error, divide_by_zero}
-end.
-
+    catch _:_ -> throw(divide_by_zero)
+    end.
