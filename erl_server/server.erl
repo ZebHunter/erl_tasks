@@ -43,13 +43,14 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 calculate(Oper) ->
-    case Oper of
-        {add, Args} when is_list(Args) -> calculate_sum(Args);
-        {mul, Args} when is_list(Args) -> calculate_mul(Args);
-        {sub, Args} when is_list(Args) -> calculate_sub(Args);
-        {divide, Args} when is_list(Args) -> calculate_div(Args);
-        X when is_number(X) -> X
-    end.
+    Fun = fun
+        ({add, Args}) when is_list(Args) -> calculate_sum(Args);
+        ({mul, Args}) when is_list(Args) -> calculate_mul(Args);
+        ({sub, Args}) when is_list(Args) -> calculate_sub(Args);
+        ({divide, Args}) when is_list(Args) -> calculate_div(Args);
+        (X) when is_number(X) -> X
+    end,
+    Fun(Oper).
 
 calculate_sum(Args) -> 
     lists:foldl(fun(Arg, Acc) -> calculate(Arg) + Acc end, 0, Args).
@@ -62,5 +63,5 @@ calculate_sub(Args) ->
 
 calculate_div(Args) ->
     try lists:foldl(fun(Arg, Acc) -> Acc / calculate(Arg) end, hd(Args), tl(Args))
-    catch _:_ -> throw(divide_by_zero)
+    catch _:_ -> {error, divide_by_zero}
     end.

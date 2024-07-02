@@ -29,9 +29,7 @@ destroy(Pid) when is_pid(Pid) -> Pid ! stop,
     ok.
 
 write(Key, Element, Pid) -> 
-        try Pid ! {write, Key, Element}
-        catch _:Reason -> {error, Reason}
-    end,
+    Pid ! {write, Key, Element},   
     ok.
 
 delete(Key, Pid) -> 
